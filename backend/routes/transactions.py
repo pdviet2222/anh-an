@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from bson.objectid import ObjectId
-from app import db
+from extensions import db
 import datetime
 
 transactions_bp = Blueprint('transactions', __name__)

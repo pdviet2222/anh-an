@@ -1,16 +1,14 @@
 from flask import Flask, jsonify
 from flask_cors import CORS
-from pymongo import MongoClient
 from config import Config
 import os
+from extensions import init_db
 
 app = Flask(__name__)
 app.config.from_object(Config)
 CORS(app)
 
-# MongoDB Connection
-client = MongoClient(app.config['MONGO_URI'])
-db = client.get_database()
+db = init_db(app.config['MONGO_URI'])
 
 # Import and register blueprints
 from routes.auth import auth_bp
@@ -28,4 +26,4 @@ def index():
     return jsonify({"message": "Land Management System API is running"}), 200
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    app.run(debug=True, host='0.0.0.0', port=5000)

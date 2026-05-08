@@ -6,18 +6,25 @@ import MapPage from './pages/MapPage'
 import Lands from './pages/Lands'
 import Transactions from './pages/Transactions'
 import Login from './pages/Login'
+import { useTranslation } from './i18n'
 
-const Sidebar = ({ user, handleLogout }) => (
+const Sidebar = ({ user, handleLogout }) => {
+  const { locale, setLocale, t } = useTranslation()
+  return (
   <div className="sidebar">
-    <div className="logo" style={{ marginBottom: '3rem', fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--primary)' }}>
+    <div className="logo" style={{ marginBottom: '1.5rem', fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--primary)' }}>
       LandManage AI
+    </div>
+    <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+      <button className="btn" onClick={() => setLocale('en')} style={{ padding: '0.4rem 0.6rem', fontSize: '0.8rem', opacity: locale === 'en' ? 1 : 0.6 }}>EN</button>
+      <button className="btn" onClick={() => setLocale('vi')} style={{ padding: '0.4rem 0.6rem', fontSize: '0.8rem', opacity: locale === 'vi' ? 1 : 0.6 }}>VI</button>
     </div>
     <div style={{ marginBottom: '2rem', padding: '1rem', background: 'var(--glass)', borderRadius: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
       <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--accent-gradient)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <User size={16} color="white" />
       </div>
       <div style={{ overflow: 'hidden' }}>
-        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Logged in as</div>
+        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{t('common.language')}: </div>
         <div style={{ fontSize: '0.875rem', fontWeight: 'bold', textOverflow: 'ellipsis', whiteSpace: 'nowrap', overflow: 'hidden' }}>{user?.username || 'Guest'}</div>
       </div>
     </div>
@@ -40,8 +47,8 @@ const Sidebar = ({ user, handleLogout }) => (
         <LogOut size={20} /> Logout
       </button>
     </div>
-  </div>
-)
+  </div>)
+}
 
 function App() {
   const [user, setUser] = useState(JSON.parse(localStorage.getItem('user')))

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 import { Landmark, TrendingUp, Users, DollarSign, ArrowUpRight, Clock, MapPin } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
+import { useTranslation } from '../i18n'
 
 const Dashboard = () => {
   const [stats, setStats] = useState({
@@ -42,26 +43,28 @@ const Dashboard = () => {
     fetchStats()
   }, [])
 
+  const { t } = useTranslation()
+
   return (
     <div className="fade-in">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '2.5rem' }}>
         <div>
           <h1 style={{ fontSize: '2.5rem', fontWeight: '800', marginBottom: '0.5rem', background: 'var(--accent-gradient)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            System Analytics
+            {t('dashboard.title')}
           </h1>
-          <p style={{ color: 'var(--text-muted)' }}>Welcome back! Here's what's happening with your properties today.</p>
+          <p style={{ color: 'var(--text-muted)' }}>{t('dashboard.subtitle')}</p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <button className="btn" style={{ background: 'var(--glass)' }}>Export PDF</button>
-          <button className="btn btn-primary">Refresh Data</button>
+          <button className="btn" style={{ background: 'var(--glass)' }}>{t('dashboard.exportPDF')}</button>
+          <button className="btn btn-primary">{t('dashboard.refreshData')}</button>
         </div>
       </div>
       
       <div className="stats-grid">
-        <StatCard icon={<Landmark />} label="Total Land Plots" value={stats.total_lands || 1284} trend="+14%" />
-        <StatCard icon={<TrendingUp />} label="Available Plots" value={stats.available_lands || 432} trend="+5.2%" color="var(--success)" />
+        <StatCard icon={<Landmark />} label={t('lands.title')} value={stats.total_lands || 1284} trend="+14%" />
+        <StatCard icon={<TrendingUp />} label={t('common.available')} value={stats.available_lands || 432} trend="+5.2%" color="var(--success)" />
         <StatCard icon={<Users />} label="Active Investors" value="842" trend="+12%" color="var(--warning)" />
-        <StatCard icon={<DollarSign />} label="Total Revenue" value={`$${(stats.total_revenue / 1000).toFixed(1)}k` || "$4.2M"} trend="+18%" color="var(--primary)" />
+        <StatCard icon={<DollarSign />} label={t('dashboard.total_revenue') || 'Total Revenue'} value={`$${(stats.total_revenue / 1000).toFixed(1)}k` || "$4.2M"} trend="+18%" color="var(--primary)" />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '2rem', marginBottom: '2rem' }}>

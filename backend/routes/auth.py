@@ -3,7 +3,7 @@ import bcrypt
 import jwt
 import datetime
 from config import Config
-from app import db
+from extensions import db
 
 auth_bp = Blueprint('auth', __name__)
 

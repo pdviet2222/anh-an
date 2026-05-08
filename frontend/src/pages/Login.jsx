@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import axios from 'axios'
 import { useNavigate } from 'react-router-dom'
 import { Lock, Mail, User as UserIcon, Loader2 } from 'lucide-react'
+import { useTranslation } from '../i18n'
 
 const Login = () => {
   const [isRegister, setIsRegister] = useState(false)
@@ -31,6 +32,8 @@ const Login = () => {
     }
   }
 
+  const { t } = useTranslation()
+
   return (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '85vh' }}>
       <div className="card fade-in" style={{ width: '100%', maxWidth: '420px', padding: '3rem', border: '1px solid var(--primary-glow)' }}>
@@ -42,16 +45,16 @@ const Login = () => {
           }}>
             <Lock size={32} color="white" />
           </div>
-          <h2 style={{ fontSize: '1.75rem', fontWeight: '800' }}>{isRegister ? 'Create Account' : 'Welcome Back'}</h2>
+          <h2 style={{ fontSize: '1.75rem', fontWeight: '800' }}>{isRegister ? t('login.createAccount') : t('login.welcome')}</h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginTop: '0.5rem' }}>
-            {isRegister ? 'Join our elite land management network' : 'Enter your credentials to access the VIP dashboard'}
+            {isRegister ? t('login.createAccount') : t('login.subtitle')}
           </p>
         </div>
 
         <form onSubmit={handleSubmit}>
           {isRegister && (
             <div className="input-group">
-              <label><Mail size={14} /> Email Address</label>
+              <label><Mail size={14} /> {t('login.email')}</label>
               <input 
                 type="email" required
                 value={formData.email}
@@ -61,7 +64,7 @@ const Login = () => {
             </div>
           )}
           <div className="input-group">
-            <label><UserIcon size={14} /> Username</label>
+            <label><UserIcon size={14} /> {t('login.username')}</label>
             <input 
               type="text" required
               value={formData.username}
@@ -70,7 +73,7 @@ const Login = () => {
             />
           </div>
           <div className="input-group">
-            <label><Lock size={14} /> Password</label>
+            <label><Lock size={14} /> {t('login.password')}</label>
             <input 
               type="password" required
               value={formData.password}
@@ -80,17 +83,17 @@ const Login = () => {
           </div>
           
           <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', padding: '1rem' }} disabled={loading}>
-            {loading ? <Loader2 className="animate-spin" /> : (isRegister ? 'Sign Up Now' : 'Sign In to Dashboard')}
+            {loading ? <Loader2 className="animate-spin" /> : (isRegister ? t('login.signUp') : t('login.signIn'))}
           </button>
         </form>
 
         <p style={{ marginTop: '2rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-          {isRegister ? 'Already have an account?' : "Don't have an account yet?"}{' '}
+          {isRegister ? t('login.alreadyHave') : "Don't have an account yet?"}{' '}
           <span 
             onClick={() => setIsRegister(!isRegister)}
             style={{ color: 'var(--primary)', cursor: 'pointer', fontWeight: '700', textDecoration: 'underline' }}
           >
-            {isRegister ? 'Sign In' : 'Register VIP'}
+            {isRegister ? 'Sign In' : t('login.registerVIP')}
           </span>
         </p>
       </div>

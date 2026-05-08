@@ -1,6 +1,8 @@
 import React from 'react'
+import { useTranslation } from '../i18n'
 
 const Transactions = () => {
+  const { t } = useTranslation()
   const transactions = [
     { id: 'TX-9021', property: 'Skyline Land', client: 'John Doe', amount: '$500,000', date: '2026-05-01', status: 'completed' },
     { id: 'TX-9022', property: 'Riverside Plot', client: 'Jane Smith', amount: '$850,000', date: '2026-05-03', status: 'pending' },
@@ -9,14 +11,14 @@ const Transactions = () => {
 
   return (
     <div className="fade-in">
-      <h1 style={{ marginBottom: '2rem' }}>Transaction History</h1>
+      <h1 style={{ marginBottom: '2rem' }}>{t('transactions.title')}</h1>
       
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: 'var(--glass)', textAlign: 'left' }}>
               <th style={{ padding: '1rem' }}>TX ID</th>
-              <th style={{ padding: '1rem' }}>Property</th>
+              <th style={{ padding: '1rem' }}>{t('lands.propertyDetails')}</th>
               <th style={{ padding: '1rem' }}>Client</th>
               <th style={{ padding: '1rem' }}>Amount</th>
               <th style={{ padding: '1rem' }}>Date</th>
