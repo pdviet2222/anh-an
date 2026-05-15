@@ -9,27 +9,16 @@ const Dashboard = () => {
     total_lands: 0,
     available_lands: 0,
     sold_lands: 0,
-    total_revenue: 0
+    pending_lands: 0,
+    total_revenue: 0,
+    completed_transactions: 0,
+    pending_transactions: 0,
+    monthly_stats: [],
+    recent_transactions: []
   })
   const [loading, setLoading] = useState(true)
 
-  const chartData = [
-    { name: 'Jan', revenue: 4000, transactions: 24 },
-    { name: 'Feb', revenue: 3000, transactions: 18 },
-    { name: 'Mar', revenue: 9800, transactions: 45 },
-    { name: 'Apr', revenue: 3908, transactions: 22 },
-    { name: 'May', revenue: 4800, transactions: 30 },
-    { name: 'Jun', revenue: 7800, transactions: 38 },
-  ]
-
-  const pieData = [
-    { name: 'Available', value: 45, color: '#10b981' },
-    { name: 'Sold', value: 30, color: '#6366f1' },
-    { name: 'Pending', value: 25, color: '#f59e0b' },
-  ]
-
   useEffect(() => {
-    // Real API call to Flask Backend
     const fetchStats = async () => {
       try {
         const res = await axios.get('/api/reports/stats')
@@ -44,6 +33,13 @@ const Dashboard = () => {
   }, [])
 
   const { t } = useTranslation()
+  const chartData = stats.monthly_stats || []
+  const pieTotal = (stats.available_lands || 0) + (stats.sold_lands || 0) + (stats.pending_lands || 0)
+  const pieData = [
+    { name: 'Available', value: pieTotal ? Math.round(((stats.available_lands || 0) / pieTotal) * 100) : 0, color: '#10b981' },
+    { name: 'Sold', value: pieTotal ? Math.round(((stats.sold_lands || 0) / pieTotal) * 100) : 0, color: '#6366f1' },
+    { name: 'Pending', value: pieTotal ? Math.round(((stats.pending_lands || 0) / pieTotal) * 100) : 0, color: '#f59e0b' },
+  ]
 
   return (
     <div className="fade-in">
@@ -61,10 +57,10 @@ const Dashboard = () => {
       </div>
       
       <div className="stats-grid">
-        <StatCard icon={<Landmark />} label={t('lands.title')} value={stats.total_lands || 1284} trend="+14%" />
-        <StatCard icon={<TrendingUp />} label={t('common.available')} value={stats.available_lands || 432} trend="+5.2%" color="var(--success)" />
-        <StatCard icon={<Users />} label="Active Investors" value="842" trend="+12%" color="var(--warning)" />
-        <StatCard icon={<DollarSign />} label={t('dashboard.total_revenue') || 'Total Revenue'} value={`$${(stats.total_revenue / 1000).toFixed(1)}k` || "$4.2M"} trend="+18%" color="var(--primary)" />
+        <StatCard icon={<Landmark />} label={t('lands.title')} value={stats.total_lands} trend={`${stats.sold_lands} sold`} />
+        <StatCard icon={<TrendingUp />} label={t('common.available')} value={stats.available_lands} trend={`${stats.pending_lands} pending`} color="var(--success)" />
+        <StatCard icon={<Users />} label="Completed Transactions" value={stats.completed_transactions} trend={`${stats.pending_transactions} pending`} color="var(--warning)" />
+        <StatCard icon={<DollarSign />} label={t('dashboard.total_revenue') || 'Total Revenue'} value={`$${Number(stats.total_revenue || 0).toLocaleString()}`} trend="MongoDB Live" color="var(--primary)" />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '2rem', marginBottom: '2rem' }}>
@@ -78,7 +74,7 @@ const Dashboard = () => {
           </div>
           <div style={{ height: '300px' }}>
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData}>
+              <AreaChart data={chartData.length ? chartData : [{ name: 'No data', revenue: 0 }]}>
                 <defs>
                   <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.3}/>
@@ -140,9 +136,22 @@ const Dashboard = () => {
             </tr>
           </thead>
           <tbody>
-            <ActivityRow title="Diamond Villa" loc="District 1, HCM" date="2 hours ago" amount="$1.2M" status="Completed" />
-            <ActivityRow title="Skyline Apartment" loc="District 7, HCM" date="5 hours ago" amount="$450k" status="Pending" />
-            <ActivityRow title="Riverside Plot" loc="Thu Duc City" date="Yesterday" amount="$850k" status="Completed" />
+            {stats.recent_transactions?.length ? stats.recent_transactions.map((tx) => (
+              <ActivityRow
+                key={tx._id}
+                title={tx.land_title || 'Unknown Property'}
+                loc={typeof tx.land_location === 'string' ? tx.land_location : 'N/A'}
+                date={tx.date ? new Date(tx.date).toLocaleString() : '-'}
+                amount={`$${Number(tx.amount || 0).toLocaleString()}`}
+                status={tx.status === 'completed' ? 'Completed' : tx.status === 'pending' ? 'Pending' : 'Cancelled'}
+              />
+            )) : (
+              <tr>
+                <td colSpan={5} style={{ padding: '1rem', color: 'var(--text-muted)' }}>
+                  {loading ? 'Loading recent transactions...' : 'No transactions yet'}
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

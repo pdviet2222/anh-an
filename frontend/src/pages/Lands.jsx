@@ -4,8 +4,11 @@ import { PlusCircle, Search, Edit2, Trash2, X, MapPin, Maximize2, Tag } from 'lu
 import { useTranslation } from '../i18n'
 
 const Lands = () => {
+  const { t } = useTranslation()
   const [lands, setLands] = useState([])
   const [loading, setLoading] = useState(true)
+  const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, total_pages: 0 })
+  const [filters, setFilters] = useState({ q: '', status: '' })
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingLand, setEditingLand] = useState(null)
   const [formData, setFormData] = useState({
@@ -17,11 +20,19 @@ const Lands = () => {
     status: 'available'
   })
 
-  const fetchLands = async () => {
+  const fetchLands = async (page = 1, activeFilters = filters) => {
     setLoading(true)
     try {
-      const res = await axios.get('/api/lands/')
-      setLands(res.data)
+      const params = {
+        page,
+        limit: pagination.limit,
+      }
+      if (activeFilters.q.trim()) params.q = activeFilters.q.trim()
+      if (activeFilters.status) params.status = activeFilters.status
+
+      const res = await axios.get('/api/lands/', { params })
+      setLands(res.data.items || [])
+      setPagination(res.data.pagination || { page: 1, limit: 10, total: 0, total_pages: 0 })
     } catch (err) {
       console.error("Error fetching lands:", err)
     } finally {
@@ -37,7 +48,7 @@ const Lands = () => {
     if (window.confirm('Are you sure you want to permanently delete this property?')) {
       try {
         await axios.delete(`/api/lands/${id}`)
-        setLands(lands.filter(land => land._id !== id))
+        fetchLands(pagination.page)
       } catch (err) {
         alert("Failed to delete property")
       }
@@ -64,11 +75,20 @@ const Lands = () => {
       } else {
         await axios.post('/api/lands/', formData)
       }
-      fetchLands()
+      fetchLands(pagination.page)
       setIsModalOpen(false)
     } catch (err) {
-      alert("Error saving data")
+      alert(err.response?.data?.error || "Error saving data")
     }
+  }
+
+  const applyFilters = () => {
+    fetchLands(1, filters)
+  }
+
+  const handlePageChange = (nextPage) => {
+    if (nextPage < 1 || nextPage > pagination.total_pages) return
+    fetchLands(nextPage)
   }
 
   return (
@@ -89,10 +109,22 @@ const Lands = () => {
           <input 
             type="text" 
             placeholder={t('lands.filterPlaceholder')} 
+            value={filters.q}
+            onChange={(e) => setFilters({ ...filters, q: e.target.value })}
             style={{ flex: 1, background: 'transparent', border: 'none', color: 'white', outline: 'none', fontSize: '1rem' }}
           />
+          <select
+            value={filters.status}
+            onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+            style={{ background: 'transparent', border: '1px solid var(--border)', color: 'white', borderRadius: '0.5rem', padding: '0.4rem 0.6rem' }}
+          >
+            <option value="">All</option>
+            <option value="available">{t('common.available')}</option>
+            <option value="sold">{t('common.sold')}</option>
+            <option value="pending">{t('common.pending')}</option>
+          </select>
           <div style={{ width: '1px', height: '24px', background: 'var(--border)' }}></div>
-          <button className="btn" style={{ background: 'transparent', color: 'var(--text-muted)' }}>Filter</button>
+          <button className="btn" onClick={applyFilters} style={{ background: 'transparent', color: 'var(--text-muted)' }}>Filter</button>
         </div>
       </div>
 
@@ -157,6 +189,16 @@ const Lands = () => {
           </table>
         </div>
       )}
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem' }}>
+        <span style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+          Total: {pagination.total || 0}
+        </span>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button className="btn" onClick={() => handlePageChange((pagination.page || 1) - 1)} disabled={(pagination.page || 1) <= 1}>Prev</button>
+          <button className="btn" onClick={() => handlePageChange((pagination.page || 1) + 1)} disabled={(pagination.page || 1) >= (pagination.total_pages || 1)}>Next</button>
+        </div>
+      </div>
 
       {isModalOpen && (
         <div style={{

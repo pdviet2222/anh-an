@@ -26,9 +26,9 @@ const MapPage = () => {
   useEffect(() => {
     const fetchProperties = async () => {
       try {
-        const res = await axios.get('/api/lands/')
+        const res = await axios.get('/api/lands/', { params: { page: 1, limit: 200 } })
         // Filter only properties that have location coordinates
-        const withCoords = res.data.filter(p => p.location && typeof p.location === 'object')
+        const withCoords = (res.data.items || []).filter(p => p.location && typeof p.location === 'object')
         setProperties(withCoords)
       } catch (err) {
         console.error("Error fetching map data:", err)
