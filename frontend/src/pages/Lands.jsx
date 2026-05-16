@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import axios from 'axios'
 import { PlusCircle, Search, Edit2, Trash2, X, MapPin, Maximize2, Tag } from 'lucide-react'
 import { useTranslation } from '../i18n'
@@ -11,6 +11,11 @@ const Lands = () => {
   const [filters, setFilters] = useState({ q: '', status: '' })
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingLand, setEditingLand] = useState(null)
+  const [showConfirm, setShowConfirm] = useState(false)
+  const [showError, setShowError] = useState(false)
+  const [confirmMessage, setConfirmMessage] = useState('')
+  const [errorMessage, setErrorMessage] = useState('')
+  const [confirmAction, setConfirmAction] = useState(null)
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -20,7 +25,7 @@ const Lands = () => {
     status: 'available'
   })
 
-  const fetchLands = async (page = 1, activeFilters = filters) => {
+  const fetchLands = useCallback(async (page = 1, activeFilters = { q: '', status: '' }) => {
     setLoading(true)
     try {
       const params = {
@@ -38,21 +43,26 @@ const Lands = () => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [pagination.limit])
 
   useEffect(() => {
-    fetchLands()
-  }, [])
+    fetchLands(1)
+  }, [fetchLands])
 
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to permanently delete this property?')) {
+    setConfirmMessage('Are you sure you want to permanently delete this property?')
+    setConfirmAction(() => async () => {
       try {
         await axios.delete(`/api/lands/${id}`)
-        fetchLands(pagination.page)
+        fetchLands(pagination.page, filters)
+        setShowConfirm(false)
       } catch (err) {
-        alert("Failed to delete property")
+        setErrorMessage("Failed to delete property")
+        setShowError(true)
+        setShowConfirm(false)
       }
-    }
+    })
+    setShowConfirm(true)
   }
 
   const handleEdit = (land) => {
@@ -75,10 +85,11 @@ const Lands = () => {
       } else {
         await axios.post('/api/lands/', formData)
       }
-      fetchLands(pagination.page)
+      fetchLands(pagination.page, filters)
       setIsModalOpen(false)
     } catch (err) {
-      alert(err.response?.data?.error || "Error saving data")
+      setErrorMessage(err.response?.data?.error || "Error saving data")
+      setShowError(true)
     }
   }
 
@@ -88,136 +99,172 @@ const Lands = () => {
 
   const handlePageChange = (nextPage) => {
     if (nextPage < 1 || nextPage > pagination.total_pages) return
-    fetchLands(nextPage)
+    fetchLands(nextPage, filters)
   }
 
+  const summary = useMemo(() => ({
+    total: pagination.total || lands.length || 0,
+    available: lands.filter((land) => land.status === 'available').length,
+    pending: lands.filter((land) => land.status === 'pending').length,
+    sold: lands.filter((land) => land.status === 'sold').length,
+  }), [lands, pagination.total])
+
   return (
-    <div className="fade-in">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+    <div className="fade-in lands-page">
+      <div className="page-hero">
         <div>
-          <h1 style={{ fontSize: '2rem', fontWeight: '800' }}>{t('lands.title')}</h1>
-          <p style={{ color: 'var(--text-muted)' }}>{t('lands.subtitle')}</p>
+          <div className="page-kicker">Property control center</div>
+          <h1 className="page-title">{t('lands.title')}</h1>
+          <p className="page-subtitle">{t('lands.subtitle')}</p>
         </div>
-        <button className="btn btn-primary" onClick={handleAddNew} style={{ padding: '0.8rem 2rem' }}>
+        <button className="btn btn-primary hero-action" onClick={handleAddNew}>
           <PlusCircle size={20} /> {t('lands.addNew')}
         </button>
       </div>
 
-      <div className="card" style={{ marginBottom: '2rem', padding: '1rem' }}>
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          <Search size={20} color="var(--text-muted)" />
-          <input 
-            type="text" 
-            placeholder={t('lands.filterPlaceholder')} 
+      <div className="lands-summary-grid">
+        <div className="card summary-card">
+          <span className="summary-label">Total properties</span>
+          <strong className="summary-value">{summary.total}</strong>
+          <span className="summary-note">All land assets in the inventory</span>
+        </div>
+        <div className="card summary-card">
+          <span className="summary-label">Available</span>
+          <strong className="summary-value summary-value-success">{summary.available}</strong>
+          <span className="summary-note">Ready for listing or sale</span>
+        </div>
+        <div className="card summary-card">
+          <span className="summary-label">Pending</span>
+          <strong className="summary-value summary-value-warning">{summary.pending}</strong>
+          <span className="summary-note">Awaiting review or approval</span>
+        </div>
+        <div className="card summary-card">
+          <span className="summary-label">Sold</span>
+          <strong className="summary-value summary-value-danger">{summary.sold}</strong>
+          <span className="summary-note">Closed transactions tracked here</span>
+        </div>
+      </div>
+
+      <div className="card lands-toolbar">
+        <div className="toolbar-grid">
+          <div className="toolbar-search">
+            <Search size={18} color="var(--text-muted)" />
+          <input
+            type="text"
+            placeholder={t('lands.filterPlaceholder')}
             value={filters.q}
             onChange={(e) => setFilters({ ...filters, q: e.target.value })}
-            style={{ flex: 1, background: 'transparent', border: 'none', color: 'white', outline: 'none', fontSize: '1rem' }}
-          />
-          <select
-            value={filters.status}
-            onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-            style={{ background: 'transparent', border: '1px solid var(--border)', color: 'white', borderRadius: '0.5rem', padding: '0.4rem 0.6rem' }}
-          >
-            <option value="">All</option>
-            <option value="available">{t('common.available')}</option>
-            <option value="sold">{t('common.sold')}</option>
-            <option value="pending">{t('common.pending')}</option>
-          </select>
-          <div style={{ width: '1px', height: '24px', background: 'var(--border)' }}></div>
-          <button className="btn" onClick={applyFilters} style={{ background: 'transparent', color: 'var(--text-muted)' }}>Filter</button>
+            />
+          </div>
+          <div className="toolbar-actions">
+            <select
+              className="toolbar-select"
+              value={filters.status}
+              onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+            >
+              <option value="">All</option>
+              <option value="available">{t('common.available')}</option>
+              <option value="sold">{t('common.sold')}</option>
+              <option value="pending">{t('common.pending')}</option>
+            </select>
+            <button className="btn toolbar-button" onClick={applyFilters}>Filter</button>
+          </div>
         </div>
       </div>
 
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '4rem' }}>{t('lands.loading')}</div>
+        <div className="card lands-loading">{t('lands.loading')}</div>
       ) : (
-        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ background: 'var(--glass)', textAlign: 'left', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                <th style={{ padding: '1.25rem' }}>{t('lands.propertyDetails')}</th>
-                <th style={{ padding: '1.25rem' }}>{t('lands.location')}</th>
-                <th style={{ padding: '1.25rem' }}>{t('lands.area')}</th>
-                <th style={{ padding: '1.25rem' }}>{t('lands.valuation')}</th>
-                <th style={{ padding: '1.25rem' }}>{t('lands.status')}</th>
-                <th style={{ padding: '1.25rem' }}>{t('lands.actions')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {lands.map(land => (
-                <tr key={land._id} style={{ borderBottom: '1px solid var(--border)', transition: 'background 0.2s' }} className="table-row-hover">
-                  <td style={{ padding: '1.25rem' }}>
-                    <div style={{ fontWeight: '700', color: 'var(--text-main)', marginBottom: '0.25rem' }}>{land.title}</div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>ID: {land._id.substring(0, 8)}...</div>
-                  </td>
-                  <td style={{ padding: '1.25rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.875rem' }}>
-                      <MapPin size={14} color="var(--primary)" /> {land.location || "N/A"}
-                    </div>
-                  </td>
-                  <td style={{ padding: '1.25rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                      <Maximize2 size={14} color="var(--text-muted)" /> {land.area}
-                    </div>
-                  </td>
-                  <td style={{ padding: '1.25rem', fontWeight: '800', color: 'var(--success)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                      <Tag size={14} /> {land.price}
-                    </div>
-                  </td>
-                  <td style={{ padding: '1.25rem' }}>
-                      <span style={{ 
-                      padding: '0.3rem 0.8rem', 
-                      borderRadius: '2rem', 
-                      fontSize: '0.75rem',
-                      fontWeight: '700',
-                      background: land.status === 'available' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                      color: land.status === 'available' ? 'var(--success)' : 'var(--danger)'
-                    }}>
-                      {land.status === 'available' ? t('common.available').toUpperCase() : t('common.sold').toUpperCase()}
-                    </span>
-                  </td>
-                  <td style={{ padding: '1.25rem' }}>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <button className="btn" onClick={() => handleEdit(land)} style={{ padding: '0.6rem', background: 'var(--glass)' }}><Edit2 size={16} /></button>
-                      <button className="btn" onClick={() => handleDelete(land._id)} style={{ padding: '0.6rem', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)' }}><Trash2 size={16} /></button>
-                    </div>
-                  </td>
+        <div className="card lands-table-card">
+          <div className="lands-table-wrap">
+            <table className="lands-table">
+              <thead>
+                <tr>
+                  <th>{t('lands.propertyDetails')}</th>
+                  <th>{t('lands.location')}</th>
+                  <th>{t('lands.area')}</th>
+                  <th>{t('lands.valuation')}</th>
+                  <th>{t('lands.status')}</th>
+                  <th>{t('lands.actions')}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {lands.length ? lands.map(land => (
+                  <tr key={land._id} className="table-row-hover">
+                    <td>
+                      <div className="land-title">{land.title}</div>
+                      <div className="land-id">ID: {land._id.substring(0, 8)}...</div>
+                    </td>
+                    <td>
+                      <div className="land-meta">
+                        <MapPin size={14} color="var(--primary)" /> {land.location || "N/A"}
+                      </div>
+                    </td>
+                    <td>
+                      <div className="land-meta">
+                        <Maximize2 size={14} color="var(--text-muted)" /> {land.area}
+                      </div>
+                    </td>
+                    <td>
+                      <div className="land-price">
+                        <Tag size={14} /> {land.price}
+                      </div>
+                    </td>
+                    <td>
+                      <span className={`status-pill status-${land.status || 'pending'}`}>
+                        {(land.status === 'available' ? t('common.available') : land.status === 'sold' ? t('common.sold') : t('common.pending')).toUpperCase()}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="row-actions">
+                        <button className="btn row-action-btn" onClick={() => handleEdit(land)}><Edit2 size={16} /></button>
+                        <button className="btn row-action-btn danger" onClick={() => handleDelete(land._id)}><Trash2 size={16} /></button>
+                      </div>
+                    </td>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan="6">
+                      <div className="empty-state">
+                        <div className="empty-state-title">No properties found</div>
+                        <div className="empty-state-text">Try a different filter or add a new listing.</div>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem' }}>
-        <span style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+      <div className="lands-footer">
+        <span className="lands-footer-text">
           Total: {pagination.total || 0}
         </span>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <div className="lands-pagination">
           <button className="btn" onClick={() => handlePageChange((pagination.page || 1) - 1)} disabled={(pagination.page || 1) <= 1}>Prev</button>
           <button className="btn" onClick={() => handlePageChange((pagination.page || 1) + 1)} disabled={(pagination.page || 1) >= (pagination.total_pages || 1)}>Next</button>
         </div>
       </div>
 
       {isModalOpen && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
-          background: 'rgba(2, 6, 23, 0.8)', backdropFilter: 'blur(12px)',
-          display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000
-        }}>
-          <div className="card" style={{ width: '100%', maxWidth: '600px', position: 'relative', padding: '2.5rem', border: '1px solid var(--primary)' }}>
-            <button 
+        <div className="modal-backdrop">
+          <div className="card modal-card">
+            <button
               onClick={() => setIsModalOpen(false)}
-              style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}
+              className="modal-close"
             >
               <X size={24} />
             </button>
-            <h2 style={{ marginBottom: '2rem', fontSize: '1.75rem' }}>{editingLand ? t('lands.updateListing') : t('lands.newListing')}</h2>
-            <form onSubmit={handleSave}>
+            <div className="modal-header">
+              <div className="page-kicker">Property form</div>
+              <h2 className="modal-title">{editingLand ? t('lands.updateListing') : t('lands.newListing')}</h2>
+            </div>
+            <form onSubmit={handleSave} className="modal-form">
               <div className="input-group">
                 <label>{t('lands.propertyDetails')}</label>
-                <input 
+                <input
                   type="text" required
                   value={formData.title}
                   onChange={(e) => setFormData({...formData, title: e.target.value})}
@@ -226,18 +273,18 @@ const Lands = () => {
               </div>
               <div className="input-group">
                 <label>{t('lands.location')}</label>
-                <input 
+                <input
                   type="text"
                   value={formData.location}
                   onChange={(e) => setFormData({...formData, location: e.target.value})}
                   placeholder="e.g. District 1, Ho Chi Minh City"
                 />
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+              <div className="modal-grid">
                 <div className="input-group">
                   <label>{t('lands.area')} (m²)</label>
-                  <input 
-                    type="text" required
+                  <input
+                    type="number" required
                     value={formData.area}
                     onChange={(e) => setFormData({...formData, area: e.target.value})}
                     placeholder="e.g. 500"
@@ -245,8 +292,8 @@ const Lands = () => {
                 </div>
                 <div className="input-group">
                   <label>{t('lands.valuation')} ($)</label>
-                  <input 
-                    type="text" required
+                  <input
+                    type="number" required
                     value={formData.price}
                     onChange={(e) => setFormData({...formData, price: e.target.value})}
                     placeholder="e.g. 1,200,000"
@@ -255,21 +302,68 @@ const Lands = () => {
               </div>
               <div className="input-group">
                 <label>{t('lands.status')}</label>
-                <select 
+                <select
                   value={formData.status}
                   onChange={(e) => setFormData({...formData, status: e.target.value})}
-                  style={{ background: 'var(--bg-dark)' }}
+                  className="modal-select"
                 >
                   <option value="available">{t('common.available')}</option>
                   <option value="sold">{t('common.sold')}</option>
                   <option value="pending">{t('common.pending')}</option>
                 </select>
               </div>
-              <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
-                <button type="button" onClick={() => setIsModalOpen(false)} className="btn" style={{ flex: 1, background: 'var(--glass)' }}>{t('lands.cancel')}</button>
-                <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>{editingLand ? t('lands.update') : t('lands.publish')}</button>
+              <div className="modal-actions">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="btn modal-secondary-btn">{t('lands.cancel')}</button>
+                <button type="submit" className="btn btn-primary modal-primary-btn">{editingLand ? t('lands.update') : t('lands.publish')}</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {showConfirm && (
+        <div className="modal-backdrop">
+          <div className="card modal-card confirm-modal">
+            <div className="modal-header">
+              <h2 className="modal-title">Confirm Delete</h2>
+            </div>
+            <p className="confirm-message">{confirmMessage}</p>
+            <div className="modal-actions">
+              <button
+                type="button"
+                onClick={() => setShowConfirm(false)}
+                className="btn modal-secondary-btn"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmAction}
+                className="btn btn-primary modal-primary-btn danger-action"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showError && (
+        <div className="modal-backdrop">
+          <div className="card modal-card error-modal">
+            <div className="modal-header">
+              <h2 className="modal-title">Error</h2>
+            </div>
+            <p className="error-message">{errorMessage}</p>
+            <div className="modal-actions">
+              <button
+                type="button"
+                onClick={() => setShowError(false)}
+                className="btn btn-primary modal-primary-btn"
+              >
+                OK
+              </button>
+            </div>
           </div>
         </div>
       )}

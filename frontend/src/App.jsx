@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react'
-import { BrowserRouter as Router, Routes, Route, Link, Navigate } from 'react-router-dom'
-import { LayoutDashboard, Map as MapIcon, Landmark, History, LogOut, User, PlusCircle } from 'lucide-react'
+import React, { useMemo } from 'react'
+import { BrowserRouter as Router, Routes, Route, NavLink, Navigate } from 'react-router-dom'
+import { LayoutDashboard, Map as MapIcon, Landmark, History, LogOut, User } from 'lucide-react'
 import Dashboard from './pages/Dashboard'
 import MapPage from './pages/MapPage'
 import Lands from './pages/Lands'
@@ -10,40 +10,49 @@ import { useTranslation } from './i18n'
 
 const Sidebar = ({ user, handleLogout }) => {
   const { locale, setLocale, t } = useTranslation()
+  const navItems = [
+    { to: '/', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
+    { to: '/map', icon: <MapIcon size={20} />, label: 'Interactive Map' },
+    { to: '/lands', icon: <Landmark size={20} />, label: 'Property List' },
+    { to: '/transactions', icon: <History size={20} />, label: 'Transactions' },
+  ]
+
   return (
   <div className="sidebar">
-    <div className="logo" style={{ marginBottom: '1.5rem', fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--primary)' }}>
-      LandManage AI
-    </div>
-    <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
-      <button className="btn" onClick={() => setLocale('en')} style={{ padding: '0.4rem 0.6rem', fontSize: '0.8rem', opacity: locale === 'en' ? 1 : 0.6 }}>EN</button>
-      <button className="btn" onClick={() => setLocale('vi')} style={{ padding: '0.4rem 0.6rem', fontSize: '0.8rem', opacity: locale === 'vi' ? 1 : 0.6 }}>VI</button>
-    </div>
-    <div style={{ marginBottom: '2rem', padding: '1rem', background: 'var(--glass)', borderRadius: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-      <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--accent-gradient)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <User size={16} color="white" />
-      </div>
-      <div style={{ overflow: 'hidden' }}>
-        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{t('common.language')}: </div>
-        <div style={{ fontSize: '0.875rem', fontWeight: 'bold', textOverflow: 'ellipsis', whiteSpace: 'nowrap', overflow: 'hidden' }}>{user?.username || 'Guest'}</div>
+    <div className="brand-lockup">
+      <div className="brand-mark">LM</div>
+      <div>
+        <div className="brand-name">LandManage AI</div>
+        <div className="brand-caption">Asset operations</div>
       </div>
     </div>
-    <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-      <Link to="/" className="btn" style={{ justifyContent: 'flex-start', background: 'transparent', color: 'inherit' }}>
-        <LayoutDashboard size={20} /> Dashboard
-      </Link>
-      <Link to="/map" className="btn" style={{ justifyContent: 'flex-start', background: 'transparent', color: 'inherit' }}>
-        <MapIcon size={20} /> Interactive Map
-      </Link>
-      <Link to="/lands" className="btn" style={{ justifyContent: 'flex-start', background: 'transparent', color: 'inherit' }}>
-        <Landmark size={20} /> Property List
-      </Link>
-      <Link to="/transactions" className="btn" style={{ justifyContent: 'flex-start', background: 'transparent', color: 'inherit' }}>
-        <History size={20} /> Transactions
-      </Link>
+    <div className="locale-toggle" aria-label={t('common.language')}>
+      <button className={locale === 'en' ? 'active' : ''} onClick={() => setLocale('en')}>EN</button>
+      <button className={locale === 'vi' ? 'active' : ''} onClick={() => setLocale('vi')}>VI</button>
+    </div>
+    <div className="user-panel">
+      <div className="user-avatar">
+        <User size={16} />
+      </div>
+      <div className="user-copy">
+        <div className="user-label">{t('common.language')}: {locale.toUpperCase()}</div>
+        <div className="user-name">{user?.username || 'Guest'}</div>
+      </div>
+    </div>
+    <nav className="sidebar-nav">
+      {navItems.map((item) => (
+        <NavLink
+          key={item.to}
+          to={item.to}
+          end={item.to === '/'}
+          className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+        >
+          {item.icon} {item.label}
+        </NavLink>
+      ))}
     </nav>
-    <div style={{ marginTop: 'auto' }}>
-      <button onClick={handleLogout} className="btn" style={{ width: '100%', justifyContent: 'flex-start', background: 'transparent', color: 'var(--danger)' }}>
+    <div className="sidebar-footer">
+      <button onClick={handleLogout} className="nav-item logout-button">
         <LogOut size={20} /> Logout
       </button>
     </div>
@@ -51,7 +60,7 @@ const Sidebar = ({ user, handleLogout }) => {
 }
 
 function App() {
-  const [user, setUser] = useState(JSON.parse(localStorage.getItem('user')))
+  const user = useMemo(() => JSON.parse(localStorage.getItem('user') || 'null'), [])
   const isAuthenticated = !!localStorage.getItem('token')
 
   const handleLogout = () => {

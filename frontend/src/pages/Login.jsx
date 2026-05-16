@@ -1,18 +1,19 @@
 import React, { useState } from 'react'
 import axios from 'axios'
-import { useNavigate } from 'react-router-dom'
 import { Lock, Mail, User as UserIcon, Loader2 } from 'lucide-react'
 import { useTranslation } from '../i18n'
 
 const Login = () => {
   const [isRegister, setIsRegister] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [message, setMessage] = useState('')
   const [formData, setFormData] = useState({ username: '', password: '', email: '' })
-  const navigate = useNavigate()
+  const { t } = useTranslation()
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
+    setMessage('')
     try {
       const endpoint = isRegister ? '/api/auth/register' : '/api/auth/login'
       const res = await axios.post(endpoint, formData)
@@ -22,31 +23,25 @@ const Login = () => {
         localStorage.setItem('user', JSON.stringify(res.data.user))
         window.location.href = '/' // Force reload to refresh App state
       } else {
-        alert("Registration successful! Please login.")
+        setMessage(t('login.registerSuccess'))
         setIsRegister(false)
       }
     } catch (err) {
-      alert(err.response?.data?.error || "Authentication failed")
+      setMessage(err.response?.data?.error || "Authentication failed")
     } finally {
       setLoading(false)
     }
   }
 
-  const { t } = useTranslation()
-
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '85vh' }}>
-      <div className="card fade-in" style={{ width: '100%', maxWidth: '420px', padding: '3rem', border: '1px solid var(--primary-glow)' }}>
-        <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-          <div style={{ 
-            width: '64px', height: '64px', background: 'var(--accent-gradient)', 
-            borderRadius: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            margin: '0 auto 1.5rem', boxShadow: '0 10px 20px var(--primary-glow)'
-          }}>
-            <Lock size={32} color="white" />
+    <div className="auth-page">
+      <div className="card fade-in auth-card">
+        <div className="auth-header">
+          <div className="auth-icon">
+            <Lock size={32} />
           </div>
-          <h2 style={{ fontSize: '1.75rem', fontWeight: '800' }}>{isRegister ? t('login.createAccount') : t('login.welcome')}</h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginTop: '0.5rem' }}>
+          <h2>{isRegister ? t('login.createAccount') : t('login.welcome')}</h2>
+          <p>
             {isRegister ? t('login.createAccount') : t('login.subtitle')}
           </p>
         </div>
@@ -82,16 +77,17 @@ const Login = () => {
             />
           </div>
           
-          <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', padding: '1rem' }} disabled={loading}>
+          {message && <div className="auth-message">{message}</div>}
+
+          <button className="btn btn-primary auth-submit" disabled={loading}>
             {loading ? <Loader2 className="animate-spin" /> : (isRegister ? t('login.signUp') : t('login.signIn'))}
           </button>
         </form>
 
-        <p style={{ marginTop: '2rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+        <p className="auth-switch">
           {isRegister ? t('login.alreadyHave') : "Don't have an account yet?"}{' '}
           <span 
             onClick={() => setIsRegister(!isRegister)}
-            style={{ color: 'var(--primary)', cursor: 'pointer', fontWeight: '700', textDecoration: 'underline' }}
           >
             {isRegister ? 'Sign In' : t('login.registerVIP')}
           </span>
